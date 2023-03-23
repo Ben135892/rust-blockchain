@@ -1,0 +1,15 @@
+[package]
+name = "blockchain"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sha256 = { version="1.1.2" }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+secp256k1 = { version="0.20.3", features=["rand"] }
+anyhow = "1.0.42"
+rand_core = { version="0.6.4" }
