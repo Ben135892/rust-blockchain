@@ -5,6 +5,8 @@ use std::{
     thread,
 };
 
+use crate::network::rpc::RPC;
+
 pub struct TcpPeer {
     pub stream: TcpStream,
     pub outgoing: bool,
@@ -22,13 +24,28 @@ impl TcpPeer {
         self.stream.write_all(&data).unwrap();
     }
 
-    pub fn read_loop(&mut self, rpc_sender: Sender<Vec<u8>>) {
+    pub fn read_loop(&mut self, rpc_sender: Sender<RPC>) {
         loop {
             let mut buffer = [0u8; 2048];
             let n = self.stream.read(&mut buffer).unwrap();
             println!("received {} bytes", n);
             let b = buffer[0..n].to_vec();
-            rpc_sender.send(b).unwrap();
+            let addr = self.stream.peer_addr().unwrap();
+            rpc_sender
+                .send(RPC {
+                    from: addr,
+                    data: b,
+                })
+                .unwrap();
+        }
+    }
+}
+
+impl Clone for TcpPeer {
+    fn clone(&self) -> Self {
+        Self {
+            stream: self.stream.try_clone().unwrap(),
+            outgoing: self.outgoing,
         }
     }
 }
@@ -36,26 +53,19 @@ impl TcpPeer {
 pub struct TCPTransport {
     pub listen_addr: String,
     pub peer_sender: Sender<TcpPeer>,
-    pub rpc_sender: Sender<Vec<u8>>,
 }
 
 impl TCPTransport {
-    pub fn new(
-        listen_addr: String,
-        peer_sender: Sender<TcpPeer>,
-        rpc_sender: Sender<Vec<u8>>,
-    ) -> Self {
+    pub fn new(listen_addr: String, peer_sender: Sender<TcpPeer>) -> Self {
         TCPTransport {
             listen_addr: listen_addr,
             peer_sender: peer_sender,
-            rpc_sender: rpc_sender,
         }
     }
 
     pub fn start(&self) {
         let listener = TcpListener::bind("localhost:".to_string() + &self.listen_addr).unwrap();
         let peer_sender = self.peer_sender.clone();
-        let rpc_sender = self.rpc_sender.clone();
 
         thread::spawn(move || {
             loop {

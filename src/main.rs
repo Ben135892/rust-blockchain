@@ -19,15 +19,17 @@ fn main() {
     let mut local = Server::new(ServerOpts {
         listen_addr: "3000".to_string(),
         key_pair: Some(KeyPair::new(0)),
-        block_time: 12,
+        block_time: 3,
         seed_nodes: vec![String::from(":4000")],
+        rpc_decode_func: None,
     });
 
     let mut remote = Server::new(ServerOpts {
         listen_addr: "4000".to_string(),
         key_pair: None,
-        block_time: 12,
+        block_time: 3,
         seed_nodes: vec![],
+        rpc_decode_func: None,
     });
 
     thread::spawn(move || {
