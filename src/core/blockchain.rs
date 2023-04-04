@@ -9,15 +9,15 @@ pub struct Blockchain {
     lock: RwLock<()>,
 }
 
-pub fn new_blockchain(genesis: Block) -> Blockchain {
-    let bc = Blockchain {
-        blocks: vec![genesis],
-        lock: RwLock::new(()),
-    };
-    bc
-}
-
 impl Blockchain {
+    pub fn new(genesis: Block) -> Self {
+        let bc = Blockchain {
+            blocks: vec![genesis],
+            lock: RwLock::new(()),
+        };
+        bc
+    }
+
     pub fn add_block(&mut self, mut block: Block) -> Result<(), String> {
         //let _unused = self.lock.write().unwrap();
         self.verify(&mut block)?;
@@ -105,14 +105,14 @@ impl Blockchain {
     }
 }
 
-pub fn new_blockchain_with_genesis() -> Blockchain {
-    let block = random_block(0, "".to_string());
-    new_blockchain(block)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    pub fn new_blockchain_with_genesis() -> Blockchain {
+        let block = random_block(0, "".to_string());
+        Blockchain::new(block)
+    }
 
     pub fn prev_block_hash(bc: &mut Blockchain, height: u32) -> Hash {
         let prev_block = bc.get_block_with_lock(height - 1);

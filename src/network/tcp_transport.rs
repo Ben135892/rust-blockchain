@@ -1,44 +1,60 @@
-use std::io::Read;
-use std::net::{TcpListener, TcpStream};
-use std::thread;
+use std::{
+    io::Read,
+    net::{TcpListener, TcpStream},
+    sync::{mpsc::Sender, Arc, Mutex},
+    thread,
+};
 
-pub struct TCPPeer {
-    pub outgoing: bool,
+pub struct TCPTransport {
+    pub listen_addr: String,
+    pub peer_sender: Sender<Arc<TcpStream>>,
+    pub rpc_sender: Sender<Vec<u8>>,
 }
 
-pub struct TCPTransport<'a> {
-    listener_addr: &'a str,
-}
-
-pub fn new_TCPTransport(listener_addr: &str) -> TCPTransport {
-    TCPTransport { listener_addr }
-}
-
-impl TCPTransport<'_> {
-    pub fn start(&self) {
-        let listener = TcpListener::bind("localhost".to_string() + self.listener_addr).unwrap();
+impl TCPTransport {
+    pub fn new(
+        listen_addr: String,
+        peer_sender: Sender<Arc<TcpStream>>,
+        rpc_sender: Sender<Vec<u8>>,
+    ) -> Self {
+        TCPTransport {
+            listen_addr: listen_addr,
+            peer_sender: peer_sender,
+            rpc_sender: rpc_sender,
+        }
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    pub fn start(&self) {
+        let listener = TcpListener::bind("localhost:".to_string() + &self.listen_addr).unwrap();
+        let peer_sender = self.peer_sender.clone();
+        let rpc_sender = self.rpc_sender.clone();
 
-    use std::io::Write;
-    use std::sync::Arc;
-    use std::time;
-
-    #[test]
-    fn test_tcp() {
-        let tr = new_TCPTransport(&":3000");
         thread::spawn(move || {
-            //tr.start();
             loop {
-                tr.start();
+                // listen for new incoming connections
+                let (socket, _addr) = listener.accept().unwrap();
+                let socket = Arc::new(socket);
+                println!("new connection from {:?}", _addr);
+
+                peer_sender.send(socket.clone()).unwrap();
+                let rpc_sender = rpc_sender.clone();
+                thread::spawn(move || loop {
+                    let mut buffer = [0u8; 2048];
+                    let n = socket.as_ref().read(&mut buffer).unwrap();
+                    println!("received {} bytes", n);
+                    let b = buffer[0..n].to_vec();
+                    rpc_sender.send(b).unwrap();
+                });
             }
         });
-        thread::sleep(time::Duration::from_millis(1000));
-        let mut stream = TcpStream::connect("localhost:3000").unwrap();
-        stream.write("hello world".as_bytes()).unwrap();
     }
+
+    // fn read_loop(&self, socket: Arc<TcpStream>) {
+    //     loop {
+    //         let mut buffer = [0u8; 2048];
+    //         let n = socket.as_ref().read(&mut buffer).unwrap();
+    //         println!("received {} bytes", n);
+    //         //self.rpc
+    //     }
+    // }
 }
