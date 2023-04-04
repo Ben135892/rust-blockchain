@@ -1,4 +1,4 @@
-use crate::crypto::keypair::{generate_keypair, new_pk_from_string, new_sig_from_string};
+use crate::crypto::keypair::{new_pk_from_string, new_sig_from_string};
 use crate::types::hash::Hash;
 use crate::{crypto::keypair::KeyPair, types::address::Address};
 use secp256k1::{
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_sign() {
-        let key_pair = generate_keypair(0);
+        let key_pair = KeyPair::new(0);
         let mut t = new_transaction([0; 20], 5);
         println!("{}", t.hash());
 

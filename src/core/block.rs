@@ -1,5 +1,5 @@
 use super::transaction::{new_transaction, Transaction};
-use crate::{crypto::keypair::generate_keypair, types::hash::Hash};
+use crate::{crypto::keypair::KeyPair, types::hash::Hash};
 use serde::{Deserialize, Serialize};
 use sha256::{digest, try_digest};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -144,7 +144,7 @@ mod tests {
 
 pub fn random_block(height: u32, prev_hash: Hash) -> Block {
     let mut tx = new_transaction([0; 20], 5);
-    let key_pair = generate_keypair(0);
+    let key_pair = KeyPair::new(0);
     tx.sign(&key_pair);
     let header = new_header(0, "".to_string(), prev_hash, 0, 0);
     let mut b = new_block(header, vec![tx]);

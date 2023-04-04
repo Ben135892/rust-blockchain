@@ -21,17 +21,6 @@ pub fn new_pk_from_string(public_key: String) -> Result<PublicKey, String> {
     }
 }
 
-pub fn generate_keypair(seed: u64) -> KeyPair {
-    let secp = Secp256k1::new();
-    let mut rng = rngs::StdRng::seed_from_u64(seed);
-    let r = secp.generate_keypair(&mut rng);
-    KeyPair {
-        private_key: r.0,
-        public_key: r.1,
-        secp,
-    }
-}
-
 fn string_to_message(data: String) -> Message {
     let binding = digest(data);
     let msg_hash = binding.as_bytes();
@@ -43,6 +32,17 @@ fn string_to_message(data: String) -> Message {
 }
 
 impl KeyPair {
+    pub fn new(seed: u64) -> Self {
+        let secp = Secp256k1::new();
+        let mut rng = rngs::StdRng::seed_from_u64(seed);
+        let r = secp.generate_keypair(&mut rng);
+        Self {
+            private_key: r.0,
+            public_key: r.1,
+            secp,
+        }
+    }
+
     pub fn sign(&self, data: String) -> Sig {
         //let r2 = secp.generate_keypair(&mut rng);
         let signature = self.secp.sign(&string_to_message(data), &self.private_key);
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_sign_verify_success() {
-        let keypair = generate_keypair(0);
+        let keypair = KeyPair::new(0);
         let msg = "hello".to_string();
 
         let sig = keypair.sign(msg.clone());
@@ -93,14 +93,14 @@ mod tests {
 
     #[test]
     fn test_sign_verify_failure() {
-        let keypair = generate_keypair(1);
+        let keypair = KeyPair::new(1);
         println!("{:?}", keypair.private_key.to_string());
         let msg = "hello".to_string();
 
         let sig = keypair.sign(msg.clone());
         assert_eq!(sig.verify(&keypair.public_key, "hi".to_string()), false);
 
-        let other_keypair = generate_keypair(2);
+        let other_keypair = KeyPair::new(2);
         println!("{:?}", other_keypair.private_key.to_string());
         assert_eq!(
             sig.verify(&other_keypair.public_key, "hello".to_string()),

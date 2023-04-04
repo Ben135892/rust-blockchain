@@ -1,20 +1,48 @@
 use std::{
-    io::Read,
+    io::{Read, Write},
     net::{TcpListener, TcpStream},
     sync::{mpsc::Sender, Arc, Mutex},
     thread,
 };
 
+pub struct TcpPeer {
+    pub stream: TcpStream,
+    pub outgoing: bool,
+}
+
+impl TcpPeer {
+    pub fn new(stream: TcpStream, outgoing: bool) -> Self {
+        Self {
+            stream: stream,
+            outgoing: outgoing,
+        }
+    }
+
+    pub fn send(&mut self, data: Vec<u8>) {
+        self.stream.write_all(&data).unwrap();
+    }
+
+    pub fn read_loop(&mut self, rpc_sender: Sender<Vec<u8>>) {
+        loop {
+            let mut buffer = [0u8; 2048];
+            let n = self.stream.read(&mut buffer).unwrap();
+            println!("received {} bytes", n);
+            let b = buffer[0..n].to_vec();
+            rpc_sender.send(b).unwrap();
+        }
+    }
+}
+
 pub struct TCPTransport {
     pub listen_addr: String,
-    pub peer_sender: Sender<Arc<TcpStream>>,
+    pub peer_sender: Sender<TcpPeer>,
     pub rpc_sender: Sender<Vec<u8>>,
 }
 
 impl TCPTransport {
     pub fn new(
         listen_addr: String,
-        peer_sender: Sender<Arc<TcpStream>>,
+        peer_sender: Sender<TcpPeer>,
         rpc_sender: Sender<Vec<u8>>,
     ) -> Self {
         TCPTransport {
@@ -33,18 +61,10 @@ impl TCPTransport {
             loop {
                 // listen for new incoming connections
                 let (socket, _addr) = listener.accept().unwrap();
-                let socket = Arc::new(socket);
+                let tcp_peer = TcpPeer::new(socket, false);
                 println!("new connection from {:?}", _addr);
 
-                peer_sender.send(socket.clone()).unwrap();
-                let rpc_sender = rpc_sender.clone();
-                thread::spawn(move || loop {
-                    let mut buffer = [0u8; 2048];
-                    let n = socket.as_ref().read(&mut buffer).unwrap();
-                    println!("received {} bytes", n);
-                    let b = buffer[0..n].to_vec();
-                    rpc_sender.send(b).unwrap();
-                });
+                peer_sender.send(tcp_peer).unwrap();
             }
         });
     }
