@@ -1,5 +1,6 @@
 use super::block::*;
 use crate::types::hash::Hash;
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::sync::RwLock;
 

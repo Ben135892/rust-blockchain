@@ -1,4 +1,4 @@
-use super::transaction::{new_transaction, Transaction};
+use super::transaction::Transaction;
 use crate::{crypto::keypair::KeyPair, types::hash::Hash};
 use serde::{Deserialize, Serialize};
 use sha256::{digest, try_digest};
@@ -15,24 +15,24 @@ pub struct Header {
     hash: Option<Hash>,
 }
 
-pub fn new_header(
-    version: u32,
-    data_hash: Hash,
-    prev_block_hash: Hash,
-    timestamp: i64,
-    height: u32,
-) -> Header {
-    Header {
-        version,
-        data_hash,
-        timestamp,
-        prev_block_hash,
-        height,
-        hash: None,
-    }
-}
-
 impl Header {
+    pub fn new(
+        version: u32,
+        data_hash: Hash,
+        prev_block_hash: Hash,
+        timestamp: i64,
+        height: u32,
+    ) -> Self {
+        Self {
+            version,
+            data_hash,
+            timestamp,
+            prev_block_hash,
+            height,
+            hash: None,
+        }
+    }
+
     pub fn encode(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
@@ -51,13 +51,6 @@ pub struct Block {
     pub transactions: Vec<Transaction>,
 }
 
-pub fn new_block(header: Header, transactions: Vec<Transaction>) -> Block {
-    Block {
-        header: header,
-        transactions: transactions,
-    }
-}
-
 pub fn new_block_from_prev_header(
     prev_header: &mut Header,
     mut transactions: Vec<Transaction>,
@@ -73,7 +66,7 @@ pub fn new_block_from_prev_header(
         prev_block_hash: prev_header.hash(),
         hash: None,
     };
-    return new_block(header, transactions);
+    return Block::new(header, transactions);
 }
 
 pub fn calculate_data_hash(transactions: &mut Vec<Transaction>) -> Hash {
@@ -85,6 +78,13 @@ pub fn calculate_data_hash(transactions: &mut Vec<Transaction>) -> Hash {
 }
 
 impl Block {
+    pub fn new(header: Header, transactions: Vec<Transaction>) -> Self {
+        Self {
+            header: header,
+            transactions: transactions,
+        }
+    }
+
     pub fn encode(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
@@ -127,7 +127,7 @@ mod tests {
 
         assert_eq!(b.verify().is_ok(), true);
 
-        let other_tx = new_transaction([0; 20], 5);
+        let other_tx = Transaction::new([0; 20], 5);
         // don't sign transaction
         b.transactions.push(other_tx);
 
@@ -143,11 +143,11 @@ mod tests {
 }
 
 pub fn random_block(height: u32, prev_hash: Hash) -> Block {
-    let mut tx = new_transaction([0; 20], 5);
+    let mut tx = Transaction::new([0; 20], 5);
     let key_pair = KeyPair::new(0);
     tx.sign(&key_pair);
-    let header = new_header(0, "".to_string(), prev_hash, 0, 0);
-    let mut b = new_block(header, vec![tx]);
+    let header = Header::new(0, "".to_string(), prev_hash, 0, 0);
+    let mut b = Block::new(header, vec![tx]);
     b.header.data_hash = calculate_data_hash(&mut b.transactions);
     b
 }

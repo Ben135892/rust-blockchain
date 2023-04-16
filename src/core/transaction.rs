@@ -29,17 +29,17 @@ pub struct Data {
     amount: u64,
 }
 
-pub fn new_transaction(to: Address, amount: u64) -> Transaction {
-    Transaction {
-        data: Data { to, amount },
-        public_key: None,
-        signature: None,
-        hash: None,
-        first_seen: None,
-    }
-}
-
 impl Transaction {
+    pub fn new(to: Address, amount: u64) -> Self {
+        Self {
+            data: Data { to, amount },
+            public_key: None,
+            signature: None,
+            hash: None,
+            first_seen: None,
+        }
+    }
+
     pub fn encode(&self) -> String {
         serde_json::to_string(&self).unwrap()
     }
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_encode_decode_transaction() {
-        let mut t = new_transaction([0; 20], 5);
+        let mut t = Transaction::new([0; 20], 5);
         println!("{}", t.hash());
 
         let mut data = t.encode();
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn test_sign() {
         let key_pair = KeyPair::new(0);
-        let mut t = new_transaction([0; 20], 5);
+        let mut t = Transaction::new([0; 20], 5);
         println!("{}", t.hash());
 
         t.sign(&key_pair);

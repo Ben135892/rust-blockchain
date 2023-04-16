@@ -9,7 +9,7 @@ use std::time::Duration;
 use super::rpc::{default_rpc_decode, RPCDecodeFunc, RPC};
 use super::tcp_transport::TCPTransport;
 use super::txpool::{self, TxPool};
-use crate::core::block::{new_block, new_block_from_prev_header, new_header, Block, Header};
+use crate::core::block::{new_block_from_prev_header, Block, Header};
 use crate::core::blockchain::Blockchain;
 use crate::crypto::keypair::KeyPair;
 use crate::network::rpc::{Decoded, Message, MESSAGE_TYPE_BLOCK};
@@ -146,7 +146,6 @@ impl Server {
             let mut chain = blockchain.write().unwrap();
             let height = chain.height();
             let block_added = chain.get_block(height).unwrap();
-
             let peer_map = peer_map.read().unwrap();
             // peer_map.clone() clones every tcp peer every time we broadcast - very inefficient
             for (_addr, mut tcp_stream) in peer_map.clone().into_iter() {
@@ -166,6 +165,6 @@ fn create_new_block(mut chain: RwLockWriteGuard<Blockchain>) {
 }
 
 fn genesis_block() -> Block {
-    let header = new_header(1, "".to_string(), "".to_string(), 0, 0);
-    new_block(header, vec![])
+    let header = Header::new(1, "".to_string(), "".to_string(), 0, 0);
+    Block::new(header, vec![])
 }
